@@ -261,7 +261,8 @@ describe("bring-your-own health path", () => {
   });
 
   it("still requires port for a bring-your-own service", () => {
-    const { port: _port, ...withoutPort } = byo;
+    const withoutPort: Record<string, unknown> = { ...byo };
+    delete withoutPort.port;
     expect(validateService(withoutPort)).toBe(false);
   });
 
