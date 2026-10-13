@@ -74,11 +74,16 @@ settled() {
 }
 
 # Snapshot used by the progress line (does not affect the settled() decision).
+# Prints: busy_count healthy_count busy_names
 progress_snapshot() {
   state=$(tilt get uiresources --port "$port" -o json 2>/dev/null) || state=""
-  busy=$(printf '%s' "$state" | jq '[.items[] | select(.status.updateStatus=="in_progress" or .status.updateStatus=="pending" or .status.updateStatus=="error")] | length' 2>/dev/null || echo "?")
+  busy=$(printf '%s' "$state" | jq -r '[.items[] | select(.status.updateStatus=="in_progress" or .status.updateStatus=="pending" or .status.updateStatus=="error") | .metadata.name] | join(",")' 2>/dev/null || echo "")
+  busy_count=$(printf '%s' "$busy" | awk -F, '{print NF}' 2>/dev/null || echo 0)
+  [ -z "$busy" ] && busy_count=0
   ok=$(docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | awk -v L="$expected" 'BEGIN { while ((getline n < L) > 0) want[n] = 1 } ($1 in want) && /\(healthy\)/ { c++ } END { print c + 0 }')
-  printf '%s %s' "${busy:-?}" "${ok:-0}"
+  # Truncate the name list so the line stays readable.
+  busy_short=$(printf '%s' "$busy" | cut -c1-120)
+  printf '%s %s %s' "${busy_count:-0}" "${ok:-0}" "$busy_short"
 }
 
 vm_memory_mib() {
@@ -166,7 +171,7 @@ run_once() {
     if [ "$waited" -ge 1800 ]; then break; fi
     if [ $((waited % progress_every)) -eq 0 ] && [ "$waited" -gt 0 ]; then
       set -- $(progress_snapshot)
-      echo "$name: still waiting (${waited}s) busy=$1 healthy=$2/$healthy"
+      echo "$name: still waiting (${waited}s) busy=$1 healthy=$2/$healthy busy_names=${3:-none}"
     fi
     sleep 3; waited=$((waited + 3))
   done
