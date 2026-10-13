@@ -122,7 +122,7 @@ expected_containers() {
 cold_cleanup() {
   # Returns non-zero when the cleanup could not finish, so the run is recorded as failed.
   list="$1"
-  ids=$(docker images --format '{{.Repository}}	{{.ID}}' \
+  ids=$(docker images --format '{{.Repository}}\t{{.ID}}' \
     | awk -F'\t' -v L="$list" -v R="$slug_re" 'BEGIN { while ((getline r < L) > 0) want[r] = 1 } ($1 in want) || ($1 ~ ("^" R "-l[0-9]+(-[a-z-]+)?$")) { print $2 }' \
     | sort -u)
   if [ -n "$ids" ]; then
@@ -174,6 +174,11 @@ run_once() {
     if [ "$waited" -ge 1800 ]; then break; fi
     if [ $((waited % progress_every)) -eq 0 ] && [ "$waited" -gt 0 ]; then
       echo "$name: still waiting (${waited}s) $(progress_snapshot)"
+      # Show recent tdk up output so the Actions log has real activity, not just counters.
+      if [ -s "$dir/up.log" ]; then
+        echo "$name: recent tdk up output:"
+        tail -n 8 "$dir/up.log" | sed 's/^/  /'
+      fi
     fi
     sleep 3; waited=$((waited + 3))
   done
