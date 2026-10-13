@@ -16,7 +16,7 @@ A backend resource needs a backend port. The usual backend range is `4000`–`59
 {
   "$schema": "https://tdk-landscape.github.io/schema.service.json",
   "schemaVersion": 1,
-  "appName": "orders-api",
+  "appName": "orders-backend",
   "appType": "backend",
   "stack": "shop",
   "port": 4000,
@@ -35,7 +35,7 @@ A frontend normally uses a port in the `3000`–`3999` range. `framework` is opt
   "appType": "frontend",
   "stack": "shop",
   "port": 3000,
-  "backendName": "orders-api",
+  "backendName": "orders-backend",
   "basePath": "/shop"
 }
 ```
