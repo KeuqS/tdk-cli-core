@@ -74,16 +74,19 @@ settled() {
 }
 
 # Snapshot used by the progress line (does not affect the settled() decision).
-# Prints: busy_count healthy_count busy_names
+# Prints a ready-to-use fragment: busy=N healthy=N/N busy_names=...
 progress_snapshot() {
   state=$(tilt get uiresources --port "$port" -o json 2>/dev/null) || state=""
   busy=$(printf '%s' "$state" | jq -r '[.items[] | select(.status.updateStatus=="in_progress" or .status.updateStatus=="pending" or .status.updateStatus=="error") | .metadata.name] | join(",")' 2>/dev/null || echo "")
-  busy_count=$(printf '%s' "$busy" | awk -F, '{print NF}' 2>/dev/null || echo 0)
-  [ -z "$busy" ] && busy_count=0
+  if [ -z "$busy" ]; then
+    busy_count=0
+    busy_short="none"
+  else
+    busy_count=$(printf '%s' "$busy" | awk -F, '{print NF}')
+    busy_short=$(printf '%s' "$busy" | cut -c1-120)
+  fi
   ok=$(docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | awk -v L="$expected" 'BEGIN { while ((getline n < L) > 0) want[n] = 1 } ($1 in want) && /\(healthy\)/ { c++ } END { print c + 0 }')
-  # Truncate the name list so the line stays readable.
-  busy_short=$(printf '%s' "$busy" | cut -c1-120)
-  printf '%s %s %s' "${busy_count:-0}" "${ok:-0}" "$busy_short"
+  printf 'busy=%s healthy=%s/%s busy_names=%s' "${busy_count}" "${ok:-0}" "$healthy" "$busy_short"
 }
 
 vm_memory_mib() {
@@ -119,7 +122,7 @@ expected_containers() {
 cold_cleanup() {
   # Returns non-zero when the cleanup could not finish, so the run is recorded as failed.
   list="$1"
-  ids=$(docker images --format '{{.Repository}}\t{{.ID}}' \
+  ids=$(docker images --format '{{.Repository}}	{{.ID}}' \
     | awk -F'\t' -v L="$list" -v R="$slug_re" 'BEGIN { while ((getline r < L) > 0) want[r] = 1 } ($1 in want) || ($1 ~ ("^" R "-l[0-9]+(-[a-z-]+)?$")) { print $2 }' \
     | sort -u)
   if [ -n "$ids" ]; then
@@ -170,8 +173,7 @@ run_once() {
     if settled; then outcome=settled; break; fi
     if [ "$waited" -ge 1800 ]; then break; fi
     if [ $((waited % progress_every)) -eq 0 ] && [ "$waited" -gt 0 ]; then
-      set -- $(progress_snapshot)
-      echo "$name: still waiting (${waited}s) busy=$1 healthy=$2/$healthy busy_names=${3:-none}"
+      echo "$name: still waiting (${waited}s) $(progress_snapshot)"
     fi
     sleep 3; waited=$((waited + 3))
   done
