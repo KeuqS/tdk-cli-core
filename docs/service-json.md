@@ -2,7 +2,7 @@
 
 Each TDK resource is described by a `service.json` file in the resource directory. The file drives resource discovery, generated Tilt and Docker configuration, routing, dependency ordering, and editor assistance.
 
-The [service schema](../engine/schemas/service-schema.json) is the source of truth for JSON types and editor validation. The CLI is authoritative at runtime: `tdk config verify` and `tdk doctor` also apply the checks described below. The published schema URL is:
+The [service schema](../engine/schemas/service-schema.json) is the source of truth for JSON types and editor validation. The CLI is authoritative at runtime: `tdk config verify` applies the manifest and generated-output checks described below, while `tdk doctor` performs environment, readiness, and discovery-time safety checks. The published schema URL is:
 
 ```text
 https://tdk-landscape.github.io/schema.service.json
@@ -49,8 +49,8 @@ Run `tdk resource <name> --type backend` or `tdk resource <name> --type frontend
 | `$schema` | string; optional | all | Editor metadata. Point it at the published schema URL for completion and inline validation. |
 | `schemaVersion` | integer; **required**, currently `1` | all | Version of the TDK manifest contract. An unsupported version is rejected; TDK does not guess how to migrate it. |
 | `appName` | string; **required** | all | Resource identifier. Use lowercase letters, numbers, and hyphens; it should match the resource directory name. |
-| `appType` | enum; **required** | all | Resource kind: `backend`, `frontend`, `library`, `sdk`, `worker`, `migrator`, `mcp`, or `bring-your-own`. |
-| `type` | enum; legacy alias for `appType` | existing manifests | Older manifests may use `type`. Use `appType` in new files. During config migration, TDK copies the legacy value to `appType`. |
+| `appType` | enum; required when `type` is absent | all | Resource kind: `backend`, `frontend`, `library`, `sdk`, `worker`, `migrator`, `mcp`, or `bring-your-own`. Provide either `appType` or the legacy `type` field. |
+| `type` | enum; legacy alias for `appType` | existing manifests | Older manifests may use `type`; provide it when `appType` is absent. Use `appType` in new files. During config migration, TDK copies the legacy value to `appType`. |
 | `stack` | string; **required** | all | Groups related resources and influences database names, routes, and generated dependency configuration. |
 
 `appType` determines more than the label shown in the UI. It selects the generator and validation rules. A `worker` must declare the `nats` feature, while `bring-your-own` resources need a `Dockerfile` or `image` and do not receive an application scaffold.
