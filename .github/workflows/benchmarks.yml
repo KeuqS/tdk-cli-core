@@ -27,7 +27,7 @@ on:
       warm_runs:
         description: "Warm runs"
         type: string
-        default: "3"
+        default: "1"
 
 permissions:
   contents: read
@@ -40,10 +40,7 @@ jobs:
   measure:
     name: ⏱️ Measure tdk up on the restaurant example
     runs-on: ubuntu-latest
-    # 1 cold + 3 warm runs, each allowed up to 30 min in the script. On a clean GitHub-hosted runner
-    # the restaurant example regularly needs most of that for the cold start; 120 min was too tight
-    # and the job was being cancelled before the report could be built.
-    timeout-minutes: 180
+    timeout-minutes: 120
     outputs:
       commit: ${{ steps.meta.outputs.commit }}
     steps:
@@ -95,7 +92,7 @@ jobs:
         env:
           TDK_EXTENSION_SOURCE: ${{ github.workspace }}
           COLD_RUNS: ${{ inputs.cold_runs || '1' }}
-          WARM_RUNS: ${{ inputs.warm_runs || '3' }}
+          WARM_RUNS: ${{ inputs.warm_runs || '1' }}
         run: |
           scripts/benchmark/tdk-up-warm-start.sh \
             --project restaurant \
